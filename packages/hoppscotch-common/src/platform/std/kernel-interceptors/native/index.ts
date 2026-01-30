@@ -190,9 +190,13 @@ export class NativeKernelInterceptorService
       )
 
       if (relevantCookies.length > 0) {
-        effectiveRequest.headers!["Cookie"] = relevantCookies
+        const cookieValue = relevantCookies
           .map((cookie) => `${cookie.name!}=${cookie.value!}`)
           .join(";")
+
+        if (cookieValue !== "") {
+          effectiveRequest.headers!["Cookie"] = cookieValue
+        }
       }
 
       const existingUserAgentHeader = Object.keys(

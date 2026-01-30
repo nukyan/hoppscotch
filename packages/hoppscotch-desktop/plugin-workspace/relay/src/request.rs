@@ -103,16 +103,6 @@ impl<'a> CurlRequest<'a> {
                 }
             })?;
 
-        // NOTE: `""` corresponds to accept all,
-        // see: https://curl.se/libcurl/c/CURLOPT_ACCEPT_ENCODING.html
-        self.handle.accept_encoding("").map_err(|e| {
-            tracing::error!(error = %e, "Failed to set accept-encoding");
-            RelayError::Network {
-                message: "Failed to set accept-encoding".into(),
-                cause: Some(e.to_string()),
-            }
-        })?;
-
         let Some(ref meta) = self.request.meta else {
             tracing::debug!("No meta configuration provided");
             return Ok(());
@@ -159,7 +149,17 @@ impl<'a> CurlRequest<'a> {
         }
 
         if let Some(decompress) = options.decompress {
-            if !decompress {
+            if decompress {
+                // NOTE: `""` corresponds to accept all,
+                // see: https://curl.se/libcurl/c/CURLOPT_ACCEPT_ENCODING.html
+                self.handle.accept_encoding("").map_err(|e| {
+                    tracing::error!(error = %e, "Failed to set accept-encoding");
+                    RelayError::Network {
+                        message: "Failed to set accept-encoding".into(),
+                        cause: Some(e.to_string()),
+                    }
+                })?;
+            } else {
                 tracing::debug!("Disabling automatic decompression");
                 self.handle.accept_encoding("identity").map_err(|e| {
                     tracing::error!(error = %e, "Failed to disable decompression");
@@ -263,8 +263,9 @@ impl<'a> CurlRequest<'a> {
 
         if let Some(ref request_headers) = self.request.headers {
             headers.extend(request_headers.clone());
-            HeadersBuilder::new(self.handle).add_headers(Some(&headers))?;
-        } else if !headers.is_empty() {
+        }
+
+        if !headers.is_empty() {
             HeadersBuilder::new(self.handle).add_headers(Some(&headers))?;
         }
 

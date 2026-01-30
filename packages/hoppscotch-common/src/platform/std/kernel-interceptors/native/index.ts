@@ -19,7 +19,6 @@ import type {
   ExecutionResult,
   KernelInterceptorError,
 } from "~/services/kernel-interceptor.service"
-import { CookieJarService } from "~/services/cookie-jar.service"
 import InterceptorsErrorPlaceholder from "~/components/interceptors/ErrorPlaceholder.vue"
 import SettingsNative from "~/components/settings/Native.vue"
 import { KernelInterceptorNativeStore } from "./store"
@@ -31,7 +30,6 @@ export class NativeKernelInterceptorService
   public static readonly ID = "NATIVE_KERNEL_INTERCEPTOR_SERVICE"
 
   private readonly store = this.bind(KernelInterceptorNativeStore)
-  private readonly cookieJar = this.bind(CookieJarService)
 
   public readonly id = "native"
   public readonly name = (t: ReturnType<typeof getI18n>) =>
@@ -185,35 +183,8 @@ export class NativeKernelInterceptorService
         preProcessRelayRequest(request)
       )
 
-      const relevantCookies = this.cookieJar.getCookiesForURL(
-        new URL(effectiveRequest.url!)
-      )
-
-      if (relevantCookies.length > 0) {
-        effectiveRequest.headers!["Cookie"] = relevantCookies
-          .map((cookie) => `${cookie.name!}=${cookie.value!}`)
-          .join(";")
-      }
-
-      const existingUserAgentHeader = Object.keys(
-        effectiveRequest.headers || {}
-      ).find((header) => header.toLowerCase() === "user-agent")
-
-      // A temporary workaround to add a User-Agent header to the request
-      // This will be removed once the kernel/relay is updated to add User-Agent header by default
-      const effectiveRequestWithUserAgent = {
-        ...effectiveRequest,
-        headers: {
-          ...effectiveRequest.headers,
-          "User-Agent": existingUserAgentHeader
-            ? effectiveRequest.headers[existingUserAgentHeader]
-            : "HoppscotchKernel/0.2.0",
-        },
-      }
-
-      const nativeRequest = await relayRequestToNativeAdapter(
-        effectiveRequestWithUserAgent
-      )
+      const nativeRequest =
+        await relayRequestToNativeAdapter(effectiveRequest)
       const postProcessedRequest = postProcessRelayRequest(nativeRequest)
       const relayExecution = Relay.execute(postProcessedRequest)
 

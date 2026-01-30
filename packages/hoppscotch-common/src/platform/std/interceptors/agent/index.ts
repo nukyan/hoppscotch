@@ -1,4 +1,3 @@
-import { CookieJarService } from "~/services/cookie-jar.service"
 import {
   Interceptor,
   InterceptorError,
@@ -276,7 +275,6 @@ export class AgentInterceptorService extends Service implements Interceptor {
   public supportsBinaryContentType = false
 
   private interceptorService = this.bind(InterceptorService)
-  private cookieJarService = this.bind(CookieJarService)
   private persistenceService = this.bind(PersistenceService)
   private uiExtensionService = this.bind(UIExtensionService)
 
@@ -715,16 +713,6 @@ export class AgentInterceptorService extends Service implements Interceptor {
     // TODO: Check if auth key is defined ?
 
     const processedReq = preProcessRequest(req)
-
-    const relevantCookies = this.cookieJarService.getCookiesForURL(
-      new URL(processedReq.url!)
-    )
-
-    if (relevantCookies.length > 0) {
-      processedReq.headers!["Cookie"] = relevantCookies
-        .map((cookie) => `${cookie.name!}=${cookie.value!}`)
-        .join(";")
-    }
 
     const reqID = this.reqIDTicker++
 
